@@ -1,11 +1,21 @@
-
 module.exports = jsonSource;
 
 function jsonSource(table, supportsWrite) {
 
   var data;
+  var waitingForData = [];
   function getData(callback) {
-    if (data) return callback(null, data);
+    if (data) {
+      return callback(null, data);
+    } else if (table.templates.jsonData) {
+      try {
+        var res = JSON.parse(table.templates.jsonData);
+      } catch (ex) {
+        callback (null, ex);
+      }
+      data = res;
+      return getData(callback);
+    } else waitingForData.push(callback);
   }
   var source = {};
 
@@ -22,7 +32,7 @@ function jsonSource(table, supportsWrite) {
     });
   };
 
-  source.getRows = getRows;
+  source.getRows = getRows;  
   function getRows(options, callback) {
     getData(function (err, res) {
       if (err) return callback(err);
@@ -66,6 +76,32 @@ function jsonSource(table, supportsWrite) {
       callback(null, res, hasMore);
     });
   };
+
+  if (supportsWrite) {
+    source.update = update;
+    function update(id, name, value, callback) {
+      getData(function (err, data) {
+        if (err) return callback(err);
+        for (var i = 0; i < data.length; i++) {
+          if (getID(data[i]) === id) {
+            data[i][name] = value;
+            return callback();
+          }
+        }
+        callback(new Error('Record not found'));
+      });
+    }
+  }
+
+  source.setData = setData;
+  function setData(d) {
+    if (data) throw new Error('The data has already been set for this json source.  If you want to replace it, create a new jsonSource');
+    data = d;
+    for (var i = 0; i < waitingForData.length; i++) {
+      waitingForData[i](null, data);
+    }
+    waitingForData = null;
+  }
 
   return source;
 }
