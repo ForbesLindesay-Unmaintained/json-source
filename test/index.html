@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="mocha.css" />
+    <link href="../build/build.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div id="mocha"></div>
+    <script src="expect.js"></script>
+    <script src="mocha.js"></script>
+    <script>
+      mocha.setup('bdd');
+    </script>
+    <script src="../build/build.js"></script>
+    <script>
+      (function () {
+        var Source = require('json-source');
+        describe('set data in JavaScript', function () {
+          var source = Source();
+          source.setData([
+            {username: "substack", name: "James Halliday"},
+            {username: "ForbesLindesay", name: "Forbes Lindesay"},
+            {username: "visionmedia", name: "TJ Holowaychuk"}
+          ]);
+          shared(source);
+        });
+        describe('set data in HTML', function () {
+          var source = Source({templates: {jsonData: '\
+            [\
+            {"username": "substack", "name": "James Halliday"},\
+            {"username": "ForbesLindesay", "name": "Forbes Lindesay"},\
+            {"username": "visionmedia", "name": "TJ Holowaychuk"}\
+          ]\
+          '}});
+          shared(source);
+        });
+        function shared(source) {
+          describe('Setting getID', function () {
+            it('lets you over-ride the default', function () {
+              expect(source.getID({id: 5})).to.equal(5);
+              source.getID = function (record) {return record.username};
+              expect(source.getID({username: 'ForbesLindesay'})).to.equal('ForbesLindesay');
+            });
+          });
+          describe('count', function () {
+            it('returns the number of records (in a callback)', function (done) {
+              source.count(function (err, count) {
+                if (err) throw err;
+                expect(count).to.equal(3);
+                done();
+              });
+            });
+          });
+          describe('getRows', function () {
+            describe('with empty options', function () {
+              it('returns all items in the original order', function (done) {
+                source.getRows({}, function (err, records, hasMore) {
+                  if (err) throw err;
+                  expect(hasMore).to.be(false);
+                  expect(records).to.be.an('array');
+                  expect(records.length).to.be(3);
+                  expect(records[0].username).to.be('substack');
+                  expect(records[1].username).to.be('ForbesLindesay');
+                  expect(records[2].username).to.be('visionmedia');
+                  done();
+                });
+              });
+            });
+            describe('with a filter', function () {
+              it('returns items matching the filter', function (done){
+                source.getRows({filter: 'ForbesLindesay'}, function (err, records, hasMore) {
+                  if (err) throw err;
+                  expect(hasMore).to.be(false);
+                  expect(records).to.be.an('array');
+                  expect(records.length).to.be(1);
+                  expect(records[0].username).to.be('ForbesLindesay');
+                  done();
+                });
+              });
+            });
+            describe('with a sort', function () {
+              it('returns items in the correct order', function (done){
+                source.getRows({sort: {field: 'username', order: 'ascending'}}, function (err, records, hasMore) {
+                  if (err) throw err;
+                  expect(hasMore).to.be(false);
+                  expect(records).to.be.an('array');
+                  expect(records.length).to.be(3);
+                  expect(records[0].username).to.be('ForbesLindesay');
+                  expect(records[1].username).to.be('substack');
+                  expect(records[2].username).to.be('visionmedia');
+                  done();
+                });
+              });
+            });
+            describe('with a page', function () {
+              it('returns only the items that fit in that page', function (done) {
+                source.getRows({page: {startIndex: 1, count: 1}}, function (err, records, hasMore) {
+                  if (err) throw err;
+                  expect(hasMore).to.be(true);
+                  expect(records).to.be.an('array');
+                  expect(records.length).to.be(1);
+                  expect(records[0].username).to.be('ForbesLindesay');
+                  done();
+                });
+              });
+            });
+            describe('with a sort and a page', function () {
+              it('returns the correct item(s)', function (done){
+                source.getRows({sort: {field: 'username', order: 'ascending'}, page: {startIndex: 1, count: 1}}, function (err, records, hasMore) {
+                  if (err) throw err;
+                  expect(hasMore).to.be(true);
+                  expect(records).to.be.an('array');
+                  expect(records.length).to.be(1);
+                  expect(records[0].username).to.be('substack');
+                  done();
+                });
+              });
+            });
+          });
+        }
+      }());
+    </script>
+    <script>
+      mocha.globals(['require']).run();
+    </script>
+  </body>
+</html>

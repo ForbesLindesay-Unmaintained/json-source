@@ -37,13 +37,14 @@ function jsonSource(table, supportsWrite) {
     getData(function (err, res) {
       if (err) return callback(err);
       var hasMore = false;
+      res = res.slice(0); //clone the array before we sort it
       try {
 
         //Filter the array first, This could remove lots of elements before sorting so great for performance.
         if (options.filter) {
           if (typeof options.filter !== 'string') throw new Error('Filter type "' + (typeof options.filter) + '" is not supported');
           res = res.filter(function (record) {
-            return JSON.stringify(record).indexOf(options.filter);
+            return JSON.stringify(record).indexOf(options.filter) != -1;
           });
         }
 
@@ -51,7 +52,7 @@ function jsonSource(table, supportsWrite) {
         if (options.sort) {
           if (typeof options.sort !== 'object') throw new Error('Sort type "' + (typeof options.sort) + '" is not supported');
           if (typeof options.sort.field !== 'string' || typeof options.sort.order !== 'string') throw new Error('Sort type "' + JSON.stringify(options.sort) + '" is not supported');
-          if (typeof options.sort.order !== 'ascending' & typeof options.sort.order !== 'descending') throw new Error('Sort order "' + (options.sort.order) + '" is not supported');
+          if (options.sort.order !== 'ascending' && options.sort.order !== 'descending') throw new Error('Sort order "' + (options.sort.order) + '" is not supported');
 
           var comp = compare(options.sort.field);
           if (options.sort.order === 'descending') comp = reverseCompare(comp);
@@ -108,8 +109,8 @@ function jsonSource(table, supportsWrite) {
 
 function compare(field) {
   return function compare(a, b) { // greater than 0 to sort b before a, less than 0 to sort a before b
-    if (typeof a === 'string') return a.localeCompare(b);
-    return a > b ? 1 : -1;
+    if (typeof a[field] === 'string') return a[field].localeCompare(b[field]);
+    return a[field] > b[field] ? 1 : -1;
   };
 }
 
