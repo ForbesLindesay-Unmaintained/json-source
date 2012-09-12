@@ -9,9 +9,9 @@ function jsonSource(table, supportsWrite) {
       return callback(null, data);
     } else if (table.templates.jsonData) {
       try {
-        var res = JSON.parse(table.templates.jsonData);
+        var res = JSON.parse(table.templates.jsonData.trim());
       } catch (ex) {
-        callback (null, ex);
+        return callback(ex);
       }
       data = res;
       return getData(callback);
